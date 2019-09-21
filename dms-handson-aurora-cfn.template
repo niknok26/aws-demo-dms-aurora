@@ -1,0 +1,359 @@
+---
+#
+# Copyright 2018, Amazon Web Services, Inc. or its Affiliates.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template for DMS hands-on
+Parameters:
+  KeyName:
+    Description: Choose your EC2 KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+  PrimaryAZ:
+    Type: String
+    Default: ap-southeast-1a
+    AllowedPattern: ^ap-southeast-1[a-c]$
+    Description: AZ to create instances. If you have 4 AZ and don't use ap-northeast-1a generally, please change here to another AZ.
+  SecondaryAZ:
+    Type: String
+    Default: ap-southeast-1b
+    AllowedPattern: ^ap-southeast-1[a-e]$
+    Description: AZ to create instances. If you have 4 AZ and don't use ap-northeast-1c generally, please change here to another AZ.
+  UniqueNo:
+    Type: Number
+    Default: 58
+    MinValue: 0
+    MaxValue: 255
+    Description: Input B of 10.B.0.0/16 for your hands-on VPC. If you are already using 10.58.0.0/16 or sharing an AWS account with co-workers joining this hands-on, you need to change this number to prevent conflict. (MinValue=0 / MaxValue=255)
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Join
+        - .
+        - - 10
+          - !Ref UniqueNo
+          - 0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+  AttachIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+  SubnetPub0:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Join
+        - .
+        - - 10
+          - !Ref UniqueNo
+          - 0.0/24
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref PrimaryAZ
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Pub0
+  SubnetPub1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Join
+        - .
+        - - 10
+          - !Ref UniqueNo
+          - 1.0/24
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref SecondaryAZ
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Pub1
+  SubnetPriv0:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Join
+        - .
+        - - 10
+          - !Ref UniqueNo
+          - 10.0/24
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref PrimaryAZ
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Priv0
+  SubnetPriv1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Join
+        - .
+        - - 10
+          - !Ref UniqueNo
+          - 11.0/24
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref SecondaryAZ
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Priv1
+  RTBPub0:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Pub0
+  RTBPub1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Pub1
+  RTBPriv0:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Priv0
+  RTBPriv1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Priv1
+  AssociateRTBPub0:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RTBPub0
+      SubnetId: !Ref SubnetPub0
+  AssociateRTBPub1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RTBPub1
+      SubnetId: !Ref SubnetPub1
+  AssociateRTBPriv0:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RTBPriv0
+      SubnetId: !Ref SubnetPriv0
+  AssociateRTBPriv1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RTBPriv1
+      SubnetId: !Ref SubnetPriv1
+  RoutePub0:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref RTBPub0
+  RoutePub1:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref RTBPub1
+  SGEC2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - EC2
+      GroupDescription: Security Group for EC2 in DMS hands-on
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - EC2
+  EC2:
+    Type: AWS::EC2::Instance
+    DependsOn: AttachIGW
+    Properties:
+      ImageId: ami-02798ecc1d5e7a8fb
+      InstanceType: m5.large
+      SubnetId: !Ref SubnetPub0
+      EbsOptimized: true
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 50
+            VolumeType: gp2
+      SecurityGroupIds:
+          - !GetAtt VPC.DefaultSecurityGroup
+          - !GetAtt SGEC2.GroupId
+      KeyName: !Ref KeyName
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+  DBSubnetG:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: DB Subnet Group for DMS hands-on
+      SubnetIds:
+        - !Ref SubnetPriv0
+        - !Ref SubnetPriv1
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+  RDSOracle:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      DBSnapshotIdentifier: arn:aws:rds:ap-southeast-1:920565285114:snapshot:dbs-sample-oracle-1811a
+      LicenseModel: bring-your-own-license
+      DBInstanceClass: db.m4.large
+      MultiAZ: false
+      StorageType: gp2
+      DBInstanceIdentifier: !Join
+        - ''
+        - - dmshandson
+          - !Ref UniqueNo
+          - oracle
+      DBSubnetGroupName: !Ref DBSubnetG
+      PubliclyAccessible: false
+      AvailabilityZone: !Ref PrimaryAZ
+      DBName: handson
+      BackupRetentionPeriod: 1
+      PreferredBackupWindow: 18:53-19:53
+      AutoMinorVersionUpgrade: false
+      PreferredMaintenanceWindow: Sat:20:23-Sat:21:23
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - Oracle
+  AuroraPostgresCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      DatabaseName: handson
+      DBClusterIdentifier: !Join
+        - ''
+        - - dmshandson
+          - !Ref UniqueNo
+          - cluster
+      DBClusterParameterGroupName: default.aurora-postgresql10
+      DBSubnetGroupName: !Ref DBSubnetG
+      Engine: aurora-postgresql
+      EngineMode: provisioned
+      MasterUsername: scott
+      MasterUserPassword: tigertiger
+      PreferredMaintenanceWindow: Sat:20:23-Sat:21:23
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - auroraPg
+  AuroraPostgresInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AvailabilityZone: !Ref PrimaryAZ
+      DBClusterIdentifier: !Ref AuroraPostgresCluster
+      DBInstanceIdentifier: !Join
+        - ''
+        - - dmshandson
+          - !Ref UniqueNo
+          - instance
+      DBInstanceClass: db.r4.large
+      DBParameterGroupName: default.aurora-postgresql10
+      DBSubnetGroupName: !Ref DBSubnetG
+      Engine: aurora-postgresql
+      PubliclyAccessible: false
+Outputs:
+  OraEndpoint:
+    Description: Endpoint of RDS Oracle
+    Value: !GetAtt RDSOracle.Endpoint.Address
+  auroraPgEndpoint:
+    Description: Endpoint of Aurora Postgres Cluster
+    Value: !GetAtt AuroraPostgresCluster.Endpoint.Address
