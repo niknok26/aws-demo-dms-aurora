@@ -316,6 +316,8 @@ Resources:
     Type: AWS::RDS::DBCluster
     Properties:
       DatabaseName: handson
+      MasterUsername: scott
+      MasterUserPassword: tigertiger
       DBClusterIdentifier: !Join
         - ''
         - - dmshandson
@@ -325,8 +327,6 @@ Resources:
       DBSubnetGroupName: !Ref DBSubnetG
       Engine: aurora-postgresql
       EngineMode: provisioned
-      MasterUsername: scott
-      MasterUserPassword: tigertiger
       PreferredMaintenanceWindow: Sat:20:23-Sat:21:23
       Tags:
         - Key: Name
@@ -338,18 +338,25 @@ Resources:
   AuroraPostgresInstance1:
     Type: AWS::RDS::DBInstance
     Properties:
-      AvailabilityZone: !Ref PrimaryAZ
+      Engine: aurora-postgresql
+      DBInstanceClass: db.r4.large
       DBClusterIdentifier: !Ref AuroraPostgresCluster
       DBInstanceIdentifier: !Join
         - ''
         - - dmshandson
           - !Ref UniqueNo
           - instance
-      DBInstanceClass: db.r4.large
-      DBParameterGroupName: default.aurora-postgresql10
       DBSubnetGroupName: !Ref DBSubnetG
-      Engine: aurora-postgresql
       PubliclyAccessible: false
+      AvailabilityZone: !Ref PrimaryAZ
+      DBParameterGroupName: default.aurora-postgresql10
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - DMSHandson
+              - !Ref UniqueNo
+              - instance
 Outputs:
   OraEndpoint:
     Description: Endpoint of RDS Oracle
